@@ -55,7 +55,7 @@ public final class BufferPool {
 
     /**
      * Create a new buffer pool
-     * 
+     *
      * @param memory The maximum amount of memory that this buffer pool can allocate
      * @param poolableSize The buffer size to cache in the free list rather than deallocating
      * @param metrics instance of Metrics
@@ -81,7 +81,7 @@ public final class BufferPool {
     /**
      * Allocate a buffer of the given size. This method blocks if there is not enough memory and the buffer pool
      * is configured with blocking mode.
-     * 
+     *
      * @param size The buffer size to allocate in bytes
      * @param maxTimeToBlockMs The maximum time in milliseconds to block for buffer memory to be available
      * @return The buffer
@@ -99,12 +99,17 @@ public final class BufferPool {
         this.lock.lock();
         try {
             // check if we have a free buffer of the right size pooled
+            //如果buffer 大小与poolableSize 相等且 空闲池里有buffer 就直接返回
             if (size == poolableSize && !this.free.isEmpty())
                 return this.free.pollFirst();
 
             // now check if the request is immediately satisfiable with the
             // memory on hand or if we need to block
+            //先计算出空闲buffer池的总大小
             int freeListSize = this.free.size() * this.poolableSize;
+
+            //如果可用内存大小+buffer池大小 大于等于待分配的内存大小
+            //就释放buffer池 并更新可用内存大小
             if (this.availableMemory + freeListSize >= size) {
                 // we have enough unallocated or pooled memory to immediately
                 // satisfy the request
@@ -114,13 +119,17 @@ public final class BufferPool {
                 return ByteBuffer.allocate(size);
             } else {
                 // we are out of memory and will have to block
+                //如果没有足够的内存就会进入这里进行阻塞等待
                 int accumulated = 0;
                 ByteBuffer buffer = null;
                 Condition moreMemory = this.lock.newCondition();
                 long remainingTimeToBlockNs = TimeUnit.MILLISECONDS.toNanos(maxTimeToBlockMs);
+
+                //把唤醒等待的Condition 加入等待队列
                 this.waiters.addLast(moreMemory);
                 // loop over and over until we have a buffer or have reserved
                 // enough memory to allocate one
+
                 while (accumulated < size) {
                     long startWaitNs = time.nanoseconds();
                     long timeNs;
@@ -196,7 +205,7 @@ public final class BufferPool {
     /**
      * Return buffers to the pool. If they are of the poolable size add them to the free list, otherwise just mark the
      * memory as free.
-     * 
+     *
      * @param buffer The buffer to return
      * @param size The size of the buffer to mark as deallocated, note that this maybe smaller than buffer.capacity
      *             since the buffer may re-allocate itself during in-place compression

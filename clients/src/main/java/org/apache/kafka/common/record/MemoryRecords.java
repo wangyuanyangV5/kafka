@@ -3,9 +3,9 @@
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
  * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
@@ -133,13 +133,16 @@ public class MemoryRecords implements Records {
     public void close() {
         if (writable) {
             // close the compressor to fill-in wrapper message metadata if necessary
+            //关闭buffer的输入流
             compressor.close();
 
             // flip the underlying buffer to be ready for reads
+            //flip buffer给读取buffer做准备
             buffer = compressor.buffer();
             buffer.flip();
 
             // reset the writable flag
+            //将写标志位置为不可写状态
             writable = false;
         }
     }
@@ -193,7 +196,7 @@ public class MemoryRecords implements Records {
             return new RecordsIterator(this.buffer.duplicate(), false);
         }
     }
-    
+
     @Override
     public String toString() {
         Iterator<LogEntry> iter = iterator();
@@ -273,7 +276,7 @@ public class MemoryRecords implements Records {
 
         /*
          * Read the next record from the buffer.
-         * 
+         *
          * Note that in the compressed message set, each message value size is set as the size of the un-compressed
          * version of the message value, so when we do de-compression allocating an array of the specified size for
          * reading compressed value data is sufficient.

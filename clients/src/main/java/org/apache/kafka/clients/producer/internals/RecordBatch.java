@@ -3,9 +3,9 @@
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
  * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A batch of records that is or will be sent.
- * 
+ *
  * This class is not thread safe and external synchronization must be used when modifying it
  */
 public final class RecordBatch {
@@ -60,30 +60,39 @@ public final class RecordBatch {
 
     /**
      * Append the record to the current record set and return the relative offset within that record set
-     * 
+     *
      * @return The RecordSend corresponding to this record or null if there isn't sufficient room.
      */
     public FutureRecordMetadata tryAppend(long timestamp, byte[] key, byte[] value, Callback callback, long now) {
+        //先检查缓存区是否有足够的内存存下信息
         if (!this.records.hasRoomFor(key, value)) {
             return null;
         } else {
+            //把消息加入缓冲区并返回crc的值
             long checksum = this.records.append(offsetCounter++, timestamp, key, value);
+
+            //计算出batch中最大请求的大小
             this.maxRecordSize = Math.max(this.maxRecordSize, Record.recordSize(key, value));
+            //跟下上次增加batch的时间
             this.lastAppendTime = now;
+            //创建一个请求的future
             FutureRecordMetadata future = new FutureRecordMetadata(this.produceFuture, this.recordCount,
                                                                    timestamp, checksum,
                                                                    key == null ? -1 : key.length,
                                                                    value == null ? -1 : value.length);
+            //把future放入到list中
             if (callback != null)
                 thunks.add(new Thunk(callback, future));
+            //batch中消息的数量加1
             this.recordCount++;
+
             return future;
         }
     }
 
     /**
      * Complete the request
-     * 
+     *
      * @param baseOffset The base offset of the messages assigned by the server
      * @param timestamp The timestamp returned by the broker.
      * @param exception The exception that occurred (or null if the request was successful)
@@ -142,11 +151,13 @@ public final class RecordBatch {
      */
     public boolean maybeExpire(int requestTimeoutMs, long retryBackoffMs, long now, long lingerMs, boolean isFull) {
         boolean expire = false;
-
+        //如果batch不是在重试且等待时间超过最大等待时间则为超时等待
         if (!this.inRetry() && isFull && requestTimeoutMs < (now - this.lastAppendTime))
             expire = true;
         else if (!this.inRetry() && requestTimeoutMs < (now - (this.createdMs + lingerMs)))
             expire = true;
+
+        //如果batch在重试且当前时间 - (上次发送时间+重试延迟时长) 大于请求超时时长则为超时等待
         else if (this.inRetry() && requestTimeoutMs < (now - (this.lastAttemptMs + retryBackoffMs)))
             expire = true;
 

@@ -274,13 +274,21 @@ public class Selector implements Selectable {
 
         /* check ready keys */
         long startSelect = time.nanoseconds();
+
+        //获取有事件的channel key数量
         int readyKeys = select(timeout);
+
+
         long endSelect = time.nanoseconds();
+
         currentTimeNanos = endSelect;
+
         this.sensors.selectTime.record(endSelect - startSelect, time.milliseconds());
 
         if (readyKeys > 0 || !immediatelyConnectedKeys.isEmpty()) {
+            //处理channel上产生的事件信息
             pollSelectionKeys(this.nioSelector.selectedKeys(), false);
+
             pollSelectionKeys(immediatelyConnectedKeys, true);
         }
 
@@ -305,6 +313,7 @@ public class Selector implements Selectable {
             try {
 
                 /* complete any connections that have finished their handshake (either normally or immediately) */
+                //如果处理的是channel connect事件 就建立连接
                 if (isImmediatelyConnected || key.isConnectable()) {
                     if (channel.finishConnect()) {
                         this.connected.add(channel.id());
@@ -318,9 +327,11 @@ public class Selector implements Selectable {
                     channel.prepare();
 
                 /* if channel is ready read from any connections that have readable data */
+                //如果channel 有读事件且当前没有等待读取的响应消息
                 if (channel.ready() && key.isReadable() && !hasStagedReceive(channel)) {
                     NetworkReceive networkReceive;
                     while ((networkReceive = channel.read()) != null)
+                        //把channel中响应数据给缓存到stagedReceives中
                         addToStagedReceives(channel, networkReceive);
                 }
 

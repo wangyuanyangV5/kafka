@@ -3,9 +3,9 @@
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
  * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
@@ -30,12 +30,21 @@ import java.util.Set;
 public final class Cluster {
 
     private final boolean isBootstrapConfigured;
+    //所有的breoker节点信息
     private final List<Node> nodes;
+    //没有权限的topic
     private final Set<String> unauthorizedTopics;
+    //TopicPartition就代表了一个分区，里面就是他的topic的名字，以及他在topic里的分区号；
+    // PartitioinInfo，就代表了分区的详细信息，属于哪个topic，分区号，每个分区都有多个副本，Leader在哪个broker上，
+    // followers在哪些broker上，ISR列表，都在里面
     private final Map<TopicPartition, PartitionInfo> partitionsByTopicPartition;
+    //每个topic有哪些分区
     private final Map<String, List<PartitionInfo>> partitionsByTopic;
+    //每个topic有哪些当前可用的分区，如果某个分区没有leader是存活的，此时那个分区就不可用了
     private final Map<String, List<PartitionInfo>> availablePartitionsByTopic;
+    //每个broker上放了哪些分区
     private final Map<Integer, List<PartitionInfo>> partitionsByNode;
+    //broker id 与broker对应的关系
     private final Map<Integer, Node> nodesById;
 
     /**
@@ -142,7 +151,7 @@ public final class Cluster {
     public List<Node> nodes() {
         return this.nodes;
     }
-    
+
     /**
      * Get the node by the node id (or null if no such node exists)
      * @param id The id of the node

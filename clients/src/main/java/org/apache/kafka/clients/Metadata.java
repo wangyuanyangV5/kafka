@@ -3,9 +3,9 @@
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
  * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
@@ -29,23 +29,31 @@ import org.slf4j.LoggerFactory;
  * A class encapsulating some of the logic around metadata.
  * <p>
  * This class is shared by the client thread (for partitioning) and the background sender thread.
- * 
+ *
  * Metadata is maintained for only a subset of topics, which can be added to over time. When we request metadata for a
  * topic we don't have any metadata for it will trigger a metadata update.
  */
 public final class Metadata {
 
     private static final Logger log = LoggerFactory.getLogger(Metadata.class);
-
+    //重试时间间隔（100ms）
     private final long refreshBackoffMs;
+    //默认是5分钟，默认每隔5分钟一定会强制刷新一下
     private final long metadataExpireMs;
     private int version;
+    //上次刷新的时间
     private long lastRefreshMs;
+    //上次成功刷新元数据的时间
     private long lastSuccessfulRefreshMs;
+    //集群信息
     private Cluster cluster;
+    //是否需要更新
     private boolean needUpdate;
+    //topic列表
     private final Set<String> topics;
+    //监听器
     private final List<Listener> listeners;
+    //是否需要拉取全部的topic信息
     private boolean needMetadataForAllTopics;
 
     /**
@@ -187,7 +195,7 @@ public final class Metadata {
     public synchronized void failedUpdate(long now) {
         this.lastRefreshMs = now;
     }
-    
+
     /**
      * @return The current metadata version
      */

@@ -3,9 +3,9 @@
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
  * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
@@ -165,24 +165,30 @@ public class Sender implements Runnable {
 
     /**
      * Run a single iteration of sending
-     * 
+     *
      * @param now
      *            The current POSIX time in milliseconds
      */
     void run(long now) {
+        //获取集群节点信息
         Cluster cluster = metadata.fetch();
+
         // get the list of partitions with data ready to send
+        //获取可以发送batch的node列表
         RecordAccumulator.ReadyCheckResult result = this.accumulator.ready(cluster, now);
 
         // if there are any partitions whose leaders are not known yet, force metadata update
+        //如果存在没有拉取元数据的node节点则把更新元数据的标志置为true
         if (result.unknownLeadersExist)
             this.metadata.requestUpdate();
 
         // remove any nodes we aren't ready to send to
+        //去除没有准备好的node信息
         Iterator<Node> iter = result.readyNodes.iterator();
         long notReadyTimeout = Long.MAX_VALUE;
         while (iter.hasNext()) {
             Node node = iter.next();
+            //判断node节点网络通信是否已准备好
             if (!this.client.ready(node, now)) {
                 iter.remove();
                 notReadyTimeout = Math.min(notReadyTimeout, this.client.connectionDelay(node, now));
@@ -190,6 +196,7 @@ public class Sender implements Runnable {
         }
 
         // create produce requests
+        //获取node下的所有可以发送的batch信息
         Map<Integer, List<RecordBatch>> batches = this.accumulator.drain(cluster,
                                                                          result.readyNodes,
                                                                          this.maxRequestSize,
@@ -202,13 +209,20 @@ public class Sender implements Runnable {
             }
         }
 
+        //获取所有的过期batch并释放batch资源
         List<RecordBatch> expiredBatches = this.accumulator.abortExpiredBatches(this.requestTimeout, now);
+
         // update sensors
+        //更新统计信息中的消息超时信息
         for (RecordBatch expiredBatch : expiredBatches)
             this.sensors.recordErrors(expiredBatch.topicPartition.topic(), expiredBatch.recordCount);
 
         sensors.updateProduceRequestMetrics(batches);
+
+        //生成request方法
         List<ClientRequest> requests = createProduceRequests(batches, now);
+
+
         // If we have any nodes that are ready to send + have sendable data, poll with 0 timeout so this can immediately
         // loop and try sending more data. Otherwise, the timeout is determined by nodes that have partitions with data
         // that isn't yet sendable (e.g. lingering, backing off). Note that this specifically does not include nodes
@@ -219,7 +233,11 @@ public class Sender implements Runnable {
             log.trace("Created {} produce requests: {}", requests.size(), requests);
             pollTimeout = 0;
         }
+
+
         for (ClientRequest request : requests)
+            //发送消息 只是把需要发送的消息暂存到kafkaChannel中
+            // 并使底层channel register write事件
             client.send(request, now);
 
         // if some partitions are already ready to be sent, the select time would be 0;
@@ -284,7 +302,7 @@ public class Sender implements Runnable {
 
     /**
      * Complete or retry the given batch of records.
-     * 
+     *
      * @param batch The record batch
      * @param error The error (or null if none)
      * @param baseOffset The base offset assigned to the records if successful
@@ -350,9 +368,13 @@ public class Sender implements Runnable {
             recordsByPartition.put(tp, batch);
         }
         ProduceRequest request = new ProduceRequest(acks, timeout, produceRecordsByPartition);
+
+        //生成RequestSend
         RequestSend send = new RequestSend(Integer.toString(destination),
                                            this.client.nextRequestHeader(ApiKeys.PRODUCE),
                                            request.toStruct());
+
+        //生成回调方法
         RequestCompletionHandler callback = new RequestCompletionHandler() {
             public void onComplete(ClientResponse response) {
                 handleProduceResponse(response, recordsByPartition, time.milliseconds());

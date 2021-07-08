@@ -128,11 +128,14 @@ public class KafkaChannel {
     public NetworkReceive read() throws IOException {
         NetworkReceive result = null;
 
+        //如果receive为空则创建一个新的NetworkReceive
+        //如果receive不为空，则发生了拆包这个时候需要获取完整的消息信息
         if (receive == null) {
             receive = new NetworkReceive(maxReceiveSize, id);
         }
 
         receive(receive);
+        //如果一个响应消息已经处理完成
         if (receive.complete()) {
             receive.payload().rewind();
             result = receive;

@@ -82,6 +82,7 @@ public class NetworkReceive implements Receive {
             if (bytesRead < 0)
                 throw new EOFException();
             read += bytesRead;
+            //处理响应数据大小是否发生拆包
             if (!size.hasRemaining()) {
                 size.rewind();
                 int receiveSize = size.getInt();
@@ -89,10 +90,11 @@ public class NetworkReceive implements Receive {
                     throw new InvalidReceiveException("Invalid receive (size = " + receiveSize + ")");
                 if (maxSize != UNLIMITED && receiveSize > maxSize)
                     throw new InvalidReceiveException("Invalid receive (size = " + receiveSize + " larger than " + maxSize + ")");
-
+                //设置buffer的大小
                 this.buffer = ByteBuffer.allocate(receiveSize);
             }
         }
+        //处理响应数据拆包的情况
         if (buffer != null) {
             int bytesRead = channel.read(buffer);
             if (bytesRead < 0)

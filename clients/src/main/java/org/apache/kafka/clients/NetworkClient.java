@@ -239,8 +239,13 @@ public class NetworkClient implements KafkaClient {
     }
 
     private void doSend(ClientRequest request, long now) {
+        //设置消息发送的时间戳
         request.setSendTimeMs(now);
+
+        //往当前正在发送或等待响应的请求集 中添加请求
         this.inFlightRequests.add(request);
+
+        //调用selector发送消息
         selector.send(request.request());
     }
 
@@ -255,8 +260,12 @@ public class NetworkClient implements KafkaClient {
      */
     @Override
     public List<ClientResponse> poll(long timeout, long now) {
+
+        //先判断元数据是否需要更新元数据
         long metadataTimeout = metadataUpdater.maybeUpdate(now);
+
         try {
+            //
             this.selector.poll(Utils.min(timeout, metadataTimeout, requestTimeoutMs));
         } catch (IOException e) {
             log.error("Unexpected error during I/O", e);
@@ -266,10 +275,19 @@ public class NetworkClient implements KafkaClient {
         long updatedNow = this.time.milliseconds();
         List<ClientResponse> responses = new ArrayList<>();
         handleCompletedSends(responses, updatedNow);
+
+
         handleCompletedReceives(responses, updatedNow);
+
+
         handleDisconnections(responses, updatedNow);
+
+
         handleConnections();
+
+
         handleTimedOutRequests(responses, updatedNow);
+
 
         // invoke callbacks
         for (ClientResponse response : responses) {
@@ -281,6 +299,7 @@ public class NetworkClient implements KafkaClient {
                 }
             }
         }
+
 
         return responses;
     }
@@ -538,9 +557,16 @@ public class NetworkClient implements KafkaClient {
         @Override
         public long maybeUpdate(long now) {
             // should we update our metadata?
+            // 当metadata可以更新元数据时取上次更新时间+刷新元数据重试时间(100ms)中的最大值
+            //或者取上次更新成功时间+强制刷新时间 - now 和 上次更新时间+刷新元数据重试时间(100ms)中的最大值
             long timeToNextMetadataUpdate = metadata.timeToNextUpdate(now);
+
+            //取上次没有节点可以连接的时间戳 + 刷新元数据重试时间(100ms) - now 和 0 的最大值
             long timeToNextReconnectAttempt = Math.max(this.lastNoNodeAvailableMs + metadata.refreshBackoff() - now, 0);
+
+            //如果有请求未收到响应则时间设为最大
             long waitForMetadataFetch = this.metadataFetchInProgress ? Integer.MAX_VALUE : 0;
+
             // if there is no node available to connect, back off refreshing metadata
             long metadataTimeout = Math.max(Math.max(timeToNextMetadataUpdate, timeToNextReconnectAttempt),
                     waitForMetadataFetch);
@@ -548,7 +574,9 @@ public class NetworkClient implements KafkaClient {
             if (metadataTimeout == 0) {
                 // Beware that the behavior of this method and the computation of timeouts for poll() are
                 // highly dependent on the behavior of leastLoadedNode.
+                //选择具有最少未完成请求且至少符合连接条件的节点。
                 Node node = leastLoadedNode(now);
+                //如果node还未建立连接就创建连接，如果已经连接就发送一个获取元数据的请求信息
                 maybeUpdate(now, node);
             }
 
