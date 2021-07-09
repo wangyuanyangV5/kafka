@@ -158,10 +158,14 @@ public class KafkaChannel {
     }
 
     private boolean send(Send send) throws IOException {
+        //把待发送的数据发送给channel
         send.writeTo(transportLayer);
+
+        //如果数据已经发送完毕取消读op_write事件的监听
         if (send.completed())
             transportLayer.removeInterestOps(SelectionKey.OP_WRITE);
 
+        //返回数据是否已全部发送的结果
         return send.completed();
     }
 

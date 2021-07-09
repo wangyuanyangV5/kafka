@@ -50,6 +50,7 @@ public class PlaintextTransportLayer implements TransportLayer {
     public boolean finishConnect() throws IOException {
         boolean connected = socketChannel.finishConnect();
         if (connected)
+            //如果网络连接建立成功，监听channel的读事件
             key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT | SelectionKey.OP_READ);
         return connected;
     }
@@ -209,6 +210,7 @@ public class PlaintextTransportLayer implements TransportLayer {
         key.interestOps(key.interestOps() & ~ops);
     }
 
+    //不关注read事件
     @Override
     public boolean isMute() {
         return key.isValid() && (key.interestOps() & SelectionKey.OP_READ) == 0;

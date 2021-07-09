@@ -149,6 +149,7 @@ public class Selector implements Selectable {
      * @throws IllegalStateException if there is already a connection for that id
      * @throws IOException if DNS resolution fails on the hostname or if the broker is down
      */
+    //创建网路连接
     @Override
     public void connect(String id, InetSocketAddress address, int sendBufferSize, int receiveBufferSize) throws IOException {
         if (this.channels.containsKey(id))
@@ -165,6 +166,7 @@ public class Selector implements Selectable {
         socket.setTcpNoDelay(true);
         boolean connected;
         try {
+            //与远端服务建立连接
             connected = socketChannel.connect(address);
         } catch (UnresolvedAddressException e) {
             socketChannel.close();
@@ -173,9 +175,11 @@ public class Selector implements Selectable {
             socketChannel.close();
             throw e;
         }
+        //把新建立的socketChannel 注册到select上
         SelectionKey key = socketChannel.register(nioSelector, SelectionKey.OP_CONNECT);
         KafkaChannel channel = channelBuilder.buildChannel(id, key, maxReceiveSize);
         key.attach(channel);
+        //放入map中
         this.channels.put(id, channel);
 
         if (connected) {
@@ -292,6 +296,7 @@ public class Selector implements Selectable {
             pollSelectionKeys(immediatelyConnectedKeys, true);
         }
 
+        //取出每个channel中暂存起来首个的响应消息
         addToCompletedReceives();
 
         long endIo = time.nanoseconds();
@@ -308,6 +313,7 @@ public class Selector implements Selectable {
 
             // register all per-connection metrics at once
             sensors.maybeRegisterConnectionMetrics(channel.id());
+            //加入lruConnections
             lruConnections.put(channel.id(), currentTimeNanos);
 
             try {
@@ -316,6 +322,7 @@ public class Selector implements Selectable {
                 //如果处理的是channel connect事件 就建立连接
                 if (isImmediatelyConnected || key.isConnectable()) {
                     if (channel.finishConnect()) {
+                        //加入connected列表
                         this.connected.add(channel.id());
                         this.sensors.connectionCreated.record();
                     } else
@@ -327,7 +334,7 @@ public class Selector implements Selectable {
                     channel.prepare();
 
                 /* if channel is ready read from any connections that have readable data */
-                //如果channel 有读事件且当前没有等待读取的响应消息
+                //如果channel 有读事件且当前没有等待读取的响应消息 就读取channel上的数据并放到stagedReceives 暂存起来
                 if (channel.ready() && key.isReadable() && !hasStagedReceive(channel)) {
                     NetworkReceive networkReceive;
                     while ((networkReceive = channel.read()) != null)
@@ -335,9 +342,13 @@ public class Selector implements Selectable {
                         addToStagedReceives(channel, networkReceive);
                 }
 
+
+                //如果channel已经可以写入数据,就进入处理写数据
                 /* if channel is ready write to any sockets that have space in their buffer and for which we have data */
                 if (channel.ready() && key.isWritable()) {
+                    //如果消息全部发送,取消channel对write事件监听
                     Send send = channel.write();
+                    //如果send返回为空，证明发送拆包现象，要等数据完全发送出去后再把请求放入发送成功的列表中
                     if (send != null) {
                         this.completedSends.add(send);
                         this.sensors.recordBytesSent(channel.id(), send.size());
@@ -567,8 +578,10 @@ public class Selector implements Selectable {
             while (iter.hasNext()) {
                 Map.Entry<KafkaChannel, Deque<NetworkReceive>> entry = iter.next();
                 KafkaChannel channel = entry.getKey();
+                //如果channel处于监听read事件 取出每个channel中排到第一个的响应消息
                 if (!channel.isMute()) {
                     Deque<NetworkReceive> deque = entry.getValue();
+                    //取出channel对应的队列中首个收到响应的消息放入收取到响应的队列中
                     NetworkReceive networkReceive = deque.poll();
                     this.completedReceives.add(networkReceive);
                     this.sensors.recordBytesReceived(channel.id(), networkReceive.payload().limit());

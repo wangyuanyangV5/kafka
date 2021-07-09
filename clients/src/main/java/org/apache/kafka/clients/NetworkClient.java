@@ -262,6 +262,8 @@ public class NetworkClient implements KafkaClient {
     public List<ClientResponse> poll(long timeout, long now) {
 
         //先判断元数据是否需要更新元数据
+        //如果node还未建立连接就创建连接 并使socketChannel关注read事件，
+        // 如果已经连接就 把拉取元数据请求消息暂存起来,并使socketChannel关注write事件
         long metadataTimeout = metadataUpdater.maybeUpdate(now);
 
         try {
@@ -274,18 +276,20 @@ public class NetworkClient implements KafkaClient {
         // process completed actions
         long updatedNow = this.time.milliseconds();
         List<ClientResponse> responses = new ArrayList<>();
+
+        //处理一些暂存在等待响应队列里不需要响应的请求
         handleCompletedSends(responses, updatedNow);
 
-
+        //处理客户端发起请求的响应信息并且初步封装非客户端的响应消息
         handleCompletedReceives(responses, updatedNow);
 
-
+        //处理一些断开连接的channel
         handleDisconnections(responses, updatedNow);
 
-
+        //把selector中已经完成连接的状态置为已连接
         handleConnections();
 
-
+        //如果node存在超时的请求则inFlightRequests每有一个request则在responses添加一个超时的响应消息
         handleTimedOutRequests(responses, updatedNow);
 
 
@@ -466,6 +470,7 @@ public class NetworkClient implements KafkaClient {
             String source = receive.source();
             ClientRequest req = inFlightRequests.completeNext(source);
             Struct body = parseResponse(receive.payload(), req.request().header());
+            //先判断是否是客户端本身发起的请求，如果是客户端本身发起的请求就更新客户端元数据信息
             if (!metadataUpdater.maybeHandleCompletedReceive(req, now, body))
                 responses.add(new ClientResponse(req, now, false, body));
         }
@@ -480,9 +485,11 @@ public class NetworkClient implements KafkaClient {
     private void handleDisconnections(List<ClientResponse> responses, long now) {
         for (String node : this.selector.disconnected()) {
             log.debug("Node {} disconnected.", node);
+            //todo:
             processDisconnection(responses, node, now);
         }
         // we got a disconnect so we should probably refresh our metadata and see if that broker is dead
+        //更新元数据信息
         if (this.selector.disconnected().size() > 0)
             metadataUpdater.requestUpdate();
     }
@@ -576,7 +583,8 @@ public class NetworkClient implements KafkaClient {
                 // highly dependent on the behavior of leastLoadedNode.
                 //选择具有最少未完成请求且至少符合连接条件的节点。
                 Node node = leastLoadedNode(now);
-                //如果node还未建立连接就创建连接，如果已经连接就发送一个获取元数据的请求信息
+                //如果node还未建立连接就创建连接 并使socketChannel关注read事件，
+                // 如果已经连接就 把拉取元数据请求消息暂存起来,并使socketChannel关注write事件
                 maybeUpdate(now, node);
             }
 
@@ -607,6 +615,7 @@ public class NetworkClient implements KafkaClient {
         public boolean maybeHandleCompletedReceive(ClientRequest req, long now, Struct body) {
             short apiKey = req.request().header().apiKey();
             if (apiKey == ApiKeys.METADATA.id && req.isInitiatedByNetworkClient()) {
+
                 handleResponse(req.request().header(), body, now);
                 return true;
             }
@@ -618,6 +627,7 @@ public class NetworkClient implements KafkaClient {
             this.metadata.requestUpdate();
         }
 
+        //处理客户端本身请求的响应消息 即更新自己本身的元数据信息
         private void handleResponse(RequestHeader header, Struct body, long now) {
             this.metadataFetchInProgress = false;
             MetadataResponse response = new MetadataResponse(body);
@@ -648,6 +658,7 @@ public class NetworkClient implements KafkaClient {
         /**
          * Add a metadata request to the list of sends if we can make one
          */
+        //形成一个更新元数据信息的请求
         private void maybeUpdate(long now, Node node) {
             if (node == null) {
                 log.debug("Give up sending metadata request since no node is available");
@@ -666,10 +677,12 @@ public class NetworkClient implements KafkaClient {
                     metadataRequest = new MetadataRequest(new ArrayList<>(metadata.topics()));
                 ClientRequest clientRequest = request(now, nodeConnectionId, metadataRequest);
                 log.debug("Sending metadata request {} to node {}", metadataRequest, node.id());
+                //把拉取消息暂存起来,并使socketChannel关注write事件
                 doSend(clientRequest, now);
             } else if (connectionStates.canConnect(nodeConnectionId, now)) {
                 // we don't have a connection to this node right now, make one
                 log.debug("Initialize connection to node {} for sending metadata request", node.id());
+                //与node建立网络连接  并使socketChannel关注read事件
                 initiateConnect(node, now);
                 // If initiateConnect failed immediately, this node will be put into blackout and we
                 // should allow immediately retrying in case there is another candidate node. If it
