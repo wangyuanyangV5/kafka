@@ -123,6 +123,7 @@ public class ProducerConfig extends AbstractConfig {
     public static final String RECEIVE_BUFFER_CONFIG = CommonClientConfigs.RECEIVE_BUFFER_CONFIG;
 
     /** <code>max.request.size</code> */
+    //每个请求的最大大小（1mb）
     public static final String MAX_REQUEST_SIZE_CONFIG = "max.request.size";
     private static final String MAX_REQUEST_SIZE_DOC = "The maximum size of a request in bytes. This is also effectively a cap on the maximum record size. Note that the server "
                                                        + "has its own cap on record size which may be different from this. This setting will limit the number of record "
@@ -217,6 +218,7 @@ public class ProducerConfig extends AbstractConfig {
                                                         + "received by the producer before they are published to the Kafka cluster. By default, there are no interceptors.";
 
     static {
+        //初始化配置信息
         CONFIG = new ConfigDef().define(BOOTSTRAP_SERVERS_CONFIG, Type.LIST, Importance.HIGH, CommonClientConfigs.BOOSTRAP_SERVERS_DOC)
                                 .define(BUFFER_MEMORY_CONFIG, Type.LONG, 32 * 1024 * 1024L, atLeast(0L), Importance.HIGH, BUFFER_MEMORY_DOC)
                                 .define(RETRIES_CONFIG, Type.INT, 0, between(0, Integer.MAX_VALUE), Importance.HIGH, RETRIES_DOC)

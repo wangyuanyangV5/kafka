@@ -54,6 +54,7 @@ object Kafka extends Logging {
 
   def main(args: Array[String]): Unit = {
     try {
+      //kafka broker 程序运行主类
       val serverProps = getPropsFromArgs(args)
       val kafkaServerStartable = KafkaServerStartable.fromProps(serverProps)
 

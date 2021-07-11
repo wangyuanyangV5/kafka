@@ -54,8 +54,11 @@ class LogSegment(val log: FileMessageSet,
   private var bytesSinceLastIndexEntry = 0
 
   def this(dir: File, startOffset: Long, indexIntervalBytes: Int, maxIndexSize: Int, rollJitterMs: Long, time: Time, fileAlreadyExists: Boolean = false, initFileSize: Int = 0, preallocate: Boolean = false) =
-    this(new FileMessageSet(file = Log.logFilename(dir, startOffset), fileAlreadyExists = fileAlreadyExists, initFileSize = initFileSize, preallocate = preallocate),
-         new OffsetIndex(Log.indexFilename(dir, startOffset), baseOffset = startOffset, maxIndexSize = maxIndexSize),
+    this(
+          //创建一个FileMessageSet包含一个log文件 基于os cache来操作文件的写入与刷盘
+          new FileMessageSet(file = Log.logFilename(dir, startOffset), fileAlreadyExists = fileAlreadyExists, initFileSize = initFileSize, preallocate = preallocate),
+          //创建一个index文件 基于mmap管理文件写入及刷入磁盘
+          new OffsetIndex(Log.indexFilename(dir, startOffset), baseOffset = startOffset, maxIndexSize = maxIndexSize),
          startOffset,
          indexIntervalBytes,
          rollJitterMs,
@@ -78,11 +81,15 @@ class LogSegment(val log: FileMessageSet,
     if (messages.sizeInBytes > 0) {
       trace("Inserting %d bytes at offset %d at position %d".format(messages.sizeInBytes, offset, log.sizeInBytes()))
       // append an entry to the index (if needed)
+      //index文件里的内容是基于稀疏矩阵来实现的(indexIntervalBytes=4kb);在index文件内容大致为
+      //123  145
+      //145  180即每隔4kb数据大小创建一个index数据 总共8bit 4bit offset  4bit 物理文件中的offset
       if(bytesSinceLastIndexEntry > indexIntervalBytes) {
         index.append(offset, log.sizeInBytes())
         this.bytesSinceLastIndexEntry = 0
       }
       // append the messages
+      //将消息写入到log文件中
       log.append(messages)
       this.bytesSinceLastIndexEntry += messages.sizeInBytes
     }

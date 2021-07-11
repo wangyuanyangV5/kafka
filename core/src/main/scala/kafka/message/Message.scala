@@ -128,6 +128,7 @@ object Message {
  * @param wrapperMessageTimestampType the wrapper message timestamp type, which is only defined when the message is an
  *                                    inner message of a compressed message.
  */
+//log里的消息格式为4byte(CRC32) + 1byte(magic)+ 1byte(3bit 压缩格式+ 1bit时间戳格式 + 4bit保留位) + 8byte(时间戳)+4byte(key长度)+k byte+ 4byte(value长度)+ v byte
 class Message(val buffer: ByteBuffer,
               private val wrapperMessageTimestamp: Option[Long] = None,
               private val wrapperMessageTimestampType: Option[TimestampType] = None) {

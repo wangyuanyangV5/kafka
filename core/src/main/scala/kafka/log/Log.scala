@@ -316,7 +316,9 @@ class Log(val dir: File,
    *
    * @return Information about the appended messages including the first and last offset.
    */
+    //真正执行将数据写入的操作
   def append(messages: ByteBufferMessageSet, assignOffsets: Boolean = true): LogAppendInfo = {
+    //检查每条消息的crc和大小是否正确,以及给消息的first offset及end offset赋值
     val appendInfo = analyzeAndValidateMessageSet(messages)
 
     // if we have any valid messages, append them to the log
@@ -324,6 +326,7 @@ class Log(val dir: File,
       return appendInfo
 
     // trim any invalid bytes or partial messages before appending it to the on-disk log
+    //如果消息末尾有无效字节,就删除消息集末尾的无效字节
     var validMessages = trimInvalidBytes(messages, appendInfo)
 
     try {
@@ -333,9 +336,11 @@ class Log(val dir: File,
         if (assignOffsets) {
           // assign offsets to the message set
           val offset = new LongRef(nextOffsetMetadata.messageOffset)
+          //设置消息的first offset
           appendInfo.firstOffset = offset.value
           val now = time.milliseconds
           val (validatedMessages, messageSizesMaybeChanged) = try {
+            //
             validMessages.validateMessagesAndAssignOffsets(offset,
                                                            now,
                                                            appendInfo.sourceCodec,
@@ -348,7 +353,9 @@ class Log(val dir: File,
             case e: IOException => throw new KafkaException("Error in validating messages while appending to log '%s'".format(name), e)
           }
           validMessages = validatedMessages
+          //设置消息的last offset
           appendInfo.lastOffset = offset.value - 1
+
           if (config.messageTimestampType == TimestampType.LOG_APPEND_TIME)
             appendInfo.timestamp = now
 
@@ -380,17 +387,22 @@ class Log(val dir: File,
         }
 
         // maybe roll the log if this segment is full
+        //获取当前负责写入磁盘的segment(partition-分区号目录下会有多个segment文件，
+        // 必须找到正在写入消息的segment)
         val segment = maybeRoll(validMessages.sizeInBytes)
 
         // now append to the log
+        //将消息写入到segment中去
         segment.append(appendInfo.firstOffset, validMessages)
 
         // increment the log end offset
+        //更新leo的值
         updateLogEndOffset(appendInfo.lastOffset + 1)
 
         trace("Appended message set to log %s with first offset: %d, next offset: %d, and messages: %s"
           .format(this.name, appendInfo.firstOffset, nextOffsetMetadata.messageOffset, validMessages))
 
+        //如果没有刷入磁盘的消息超过10000条就进行刷盘操作
         if (unflushedMessages >= config.flushInterval)
           flush()
 
@@ -616,6 +628,9 @@ class Log(val dir: File,
    */
   private def maybeRoll(messagesSize: Int): LogSegment = {
     val segment = activeSegment
+    //如果当前segment剩余大小不足以写下下一条消息
+    //如果当前时间减去segment创建时间 大于  7天
+    //如果segment的index已经满了
     if (segment.size > config.segmentSize - messagesSize ||
         segment.size > 0 && time.milliseconds - segment.created > config.segmentMs - segment.rollJitterMs ||
         segment.index.isFull) {
@@ -627,6 +642,7 @@ class Log(val dir: File,
                     segment.index.maxEntries,
                     time.milliseconds - segment.created,
                     config.segmentMs - segment.rollJitterMs))
+      //创建一个新的segment
       roll()
     } else {
       segment
@@ -642,7 +658,9 @@ class Log(val dir: File,
     val start = time.nanoseconds
     lock synchronized {
       val newOffset = logEndOffset
+      //根据下一个leo创建出一个log文件
       val logFile = logFilename(dir, newOffset)
+      //根据下一个leo创建出一个index文件
       val indexFile = indexFilename(dir, newOffset)
       for(file <- List(logFile, indexFile); if file.exists) {
         warn("Newly rolled segment file " + file.getName + " already exists; deleting it first")
@@ -656,22 +674,29 @@ class Log(val dir: File,
           entry.getValue.log.trim()
         }
       }
+
+      //创建一个segment对象
       val segment = new LogSegment(dir,
-                                   startOffset = newOffset,
-                                   indexIntervalBytes = config.indexInterval,
-                                   maxIndexSize = config.maxIndexSize,
+                                   startOffset = newOffset,//设置起始的leo
+                                   indexIntervalBytes = config.indexInterval,//4kb
+                                   maxIndexSize = config.maxIndexSize,//10MB
                                    rollJitterMs = config.randomSegmentJitter,
                                    time = time,
                                    fileAlreadyExists = false,
                                    initFileSize = initFileSize,
                                    preallocate = config.preallocate)
+      //将新创建的segment加入到log中方便统一管理
       val prev = addSegment(segment)
+
       if(prev != null)
         throw new KafkaException("Trying to roll a new log segment for topic partition %s with start offset %d while it already exists.".format(name, newOffset))
       // We need to update the segment base offset and append position data of the metadata when log rolls.
       // The next offset should not change.
+      //新创建出一个messageOffset 并赋值给nextOffsetMetadata
       updateLogEndOffset(nextOffsetMetadata.messageOffset)
+
       // schedule an asynchronous flush of the old segment
+      //定时调用刷方法把os cache 里的内容刷新到磁盘
       scheduler.schedule("flush-log", () => flush(newOffset), delay = 0L)
 
       info("Rolled new log segment for '" + name + "' in %.0f ms.".format((System.nanoTime - start) / (1000.0*1000.0)))

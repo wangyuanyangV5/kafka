@@ -55,9 +55,16 @@ class LogManager(val logDirs: Array[File],
   private val logCreationOrDeletionLock = new Object
   private val logs = new Pool[TopicAndPartition, Log]()
 
+  //检查给的文件是否符合规范并创建实际不存在的目录
   createAndValidateLogDirs(logDirs)
+
+  //创建文件锁
   private val dirLocks = lockLogDirs(logDirs)
+
+  //从磁盘文件中恢复Checkpoint有关信息
   private val recoveryPointCheckpoints = logDirs.map(dir => (dir, new OffsetCheckpoint(new File(dir, RecoveryPointCheckpointFile)))).toMap
+
+  //恢复并加载给定数据目录中的所有日志
   loadLogs()
 
   // public, so we can access this from kafka.admin.DeleteTopicTest

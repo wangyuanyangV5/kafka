@@ -61,7 +61,9 @@ class OffsetIndex(@volatile private[this] var _file: File, val baseOffset: Long,
   @volatile
   private[this] var mmap: MappedByteBuffer = {
     val newlyCreated = _file.createNewFile()
+    //先创建一个RandomAccessFile
     val raf = new RandomAccessFile(_file, "rw")
+
     try {
       /* pre-allocate the file if necessary */
       if (newlyCreated) {
@@ -72,6 +74,8 @@ class OffsetIndex(@volatile private[this] var _file: File, val baseOffset: Long,
 
       /* memory-map the file */
       val len = raf.length()
+
+      //创建一个mmap的结构
       val idx = raf.getChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
 
       /* set the position in the index for the next entry */
