@@ -83,9 +83,11 @@ abstract class AbstractFetcherThread(name: String,
     fetcherLagStats.unregister()
   }
 
+  //真正拉取数据的方法
   override def doWork() {
 
     val fetchRequest = inLock(partitionMapLock) {
+      //针对同在一个broker上master partition拉取数据副本
       val fetchRequest = buildFetchRequest(partitionMap)
       if (fetchRequest.isEmpty) {
         trace("There are no active partitions. Back off for %d ms before sending a fetch request".format(fetchBackOffMs))
@@ -104,7 +106,7 @@ abstract class AbstractFetcherThread(name: String,
 
     try {
       trace("Issuing to broker %d of fetch request %s".format(sourceBroker.id, fetchRequest))
-      responseData = fetch(fetchRequest)
+      responseData = fetch(fetchRequest)//
     } catch {
       case t: Throwable =>
         if (isRunning.get) {

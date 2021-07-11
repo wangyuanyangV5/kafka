@@ -71,6 +71,7 @@ abstract class AbstractFetcherManager(protected val name: String, clientId: Stri
   // to be defined in subclass to create a specific fetcher
   def createFetcherThread(fetcherId: Int, sourceBroker: BrokerEndPoint): AbstractFetcherThread
 
+  //针对某一批分区创建一个拉取数据的fetcher线程
   def addFetcherForPartitions(partitionAndOffsets: Map[TopicAndPartition, BrokerAndInitialOffset]) {
     mapLock synchronized {
       val partitionsPerFetcher = partitionAndOffsets.groupBy{ case(topicAndPartition, brokerAndInitialOffset) =>

@@ -121,7 +121,7 @@ class ReplicaManager(val config: KafkaConfig,
 
   private val replicaStateChangeLock = new Object
 
-
+  //负责从leader拉取数据
   val replicaFetcherManager = new ReplicaFetcherManager(config, this, metrics, jTime, threadNamePrefix)
 
   //高水位 CheckPoint thread
@@ -135,6 +135,7 @@ class ReplicaManager(val config: KafkaConfig,
   private val isrChangeSet: mutable.Set[TopicAndPartition] = new mutable.HashSet[TopicAndPartition]()
   private val lastIsrChangeMs = new AtomicLong(System.currentTimeMillis())
   private val lastIsrPropagationMs = new AtomicLong(System.currentTimeMillis())
+
 
   val delayedProducePurgatory = DelayedOperationPurgatory[DelayedProduce](
     purgatoryName = "Produce", config.brokerId, config.producerPurgatoryPurgeIntervalRequests)
@@ -751,13 +752,19 @@ class ReplicaManager(val config: KafkaConfig,
 
   /*
    * Make the current broker to become follower for a given set of partitions by:
-   *
+   *这些分区是follower分配给这个broker就需要进行下面的步骤
    * 1. Remove these partitions from the leader partitions set.
+   * 将这些分区从leader列表中去除
    * 2. Mark the replicas as followers so that no more data can be added from the producer clients.
+   * 将这些分区标记为follower，从而使分区不再接受生成者发送来的请求
    * 3. Stop fetchers for these partitions so that no more data can be added by the replica fetcher threads.
+   * 对这些分区停止掉已有的replicationFetcher线程，保证暂时先不用自己已有fetcher线程去拉取数据
    * 4. Truncate the log and checkpoint offsets for these partitions.
+   * Truncate 这些分区日志，记录下来这些分区的offset
    * 5. Clear the produce and fetch requests in the purgatory
+   *清理掉延迟调度的请求
    * 6. If the broker is not shutting down, add the fetcher to the new leaders.
+   *给新的leader副本添加对应的fetcher
    *
    * The ordering of doing these steps make sure that the replicas in transition will not
    * take any more messages before checkpointing offsets so that all messages before the checkpoint
@@ -767,6 +774,9 @@ class ReplicaManager(val config: KafkaConfig,
    * the error message will be set on each partition since we do not know which partition caused it. Otherwise,
    * return the set of partitions that are made follower due to this method
    */
+  //如果一个broker感知到了自己被分配了一些follower分区之后
+  //可能会调用这个方法，这里就会为这一批follower分区创建一个fetcher线程
+  //接下来fetcher线程就会负责去拉取数据到本地副本
   private def makeFollowers(controllerId: Int,
                             epoch: Int,
                             partitionState: Map[Partition, PartitionState],

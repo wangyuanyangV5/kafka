@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="43516283-a16a-4bae-8bfd-6afb91bfd1cd" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/CommonClientConfigs.java" beforeDir="false" afterPath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/CommonClientConfigs.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java" beforeDir="false" afterPath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/producer/KafkaProducer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/producer/ProducerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/clients/src/main/java/org/apache/kafka/clients/producer/ProducerConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/Kafka.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/Kafka.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/cluster/Partition.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/cluster/Partition.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/log/FileMessageSet.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/log/FileMessageSet.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/log/Log.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/log/Log.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/log/LogManager.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/log/LogManager.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/log/LogSegment.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/log/LogSegment.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/log/OffsetIndex.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/log/OffsetIndex.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/message/ByteBufferMessageSet.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/message/ByteBufferMessageSet.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/message/Message.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/message/Message.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/KafkaApis.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/KafkaApis.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/KafkaRequestHandler.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/KafkaRequestHandler.scala" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/AbstractFetcherManager.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/AbstractFetcherManager.scala" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/AbstractFetcherThread.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/AbstractFetcherThread.scala" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/ReplicaFetcherManager.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/ReplicaFetcherManager.scala" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/core/src/main/scala/kafka/server/ReplicaManager.scala" beforeDir="false" afterPath="$PROJECT_DIR$/core/src/main/scala/kafka/server/ReplicaManager.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kafka-0.10.0.1-src.ipr" beforeDir="false" afterPath="$PROJECT_DIR$/kafka-0.10.0.1-src.ipr" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/kafka-0.10.0.1-src.iws" beforeDir="false" afterPath="$PROJECT_DIR$/kafka-0.10.0.1-src.iws" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -70,6 +76,13 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="hiddenUrls">
+      <set>
+        <option value="https://github.com/wangyuanyangV5/kafka.git" />
+      </set>
+    </option>
   </component>
   <component name="ModuleEditorState">
     <option name="LAST_EDITED_MODULE_NAME" />
@@ -188,15 +201,36 @@
       <updated>1625277020007</updated>
       <workItem from="1625277021227" duration="10354000" />
       <workItem from="1625391095597" duration="6310000" />
-      <workItem from="1625970402179" duration="20086000" />
+      <workItem from="1625970402179" duration="26266000" />
     </task>
+    <task id="LOCAL-00001" summary="broker消息写入磁盘文件">
+      <created>1626004138189</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1626004138190</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="2" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="OFFER_MOVE_TO_ANOTHER_CHANGELIST_ON_PARTIAL_COMMIT" value="true" />
+    <MESSAGE value="broker消息写入磁盘文件" />
+    <option name="LAST_COMMIT_MESSAGE" value="broker消息写入磁盘文件" />
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
   </component>
   <component name="WindowStateProjectService">
@@ -208,10 +242,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="498" y="201" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1536.824@0.0.1536.824" timestamp="1625278373124" />
-    <state x="347" y="0" key="CommitChangelistDialog2" timestamp="1625982850672">
+    <state x="347" y="0" key="CommitChangelistDialog2" timestamp="1626004137097">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="347" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1625982850672" />
+    <state x="347" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1626004137097" />
     <state x="159" y="95" key="DiffContextDialog" timestamp="1625982849444">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -224,6 +258,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="249" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1625277081880" />
+    <state x="361" y="132" key="Vcs.Push.Dialog.v2" timestamp="1626004142720">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="361" y="132" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1626004142720" />
     <state x="563" y="325" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1625970447921">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
