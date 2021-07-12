@@ -309,10 +309,11 @@ class DelayedOperationPurgatory[T <: DelayedOperation](purgatoryName: String,
         val iter = operations.iterator()
         while (iter.hasNext) {
           val curr = iter.next()
+          //如果任务已经完成就删除任务
           if (curr.isCompleted) {
             // another thread has completed this operation, just remove it
             iter.remove()
-          } else if (curr synchronized curr.tryComplete()) {
+          } else if (curr synchronized curr.tryComplete()) {//如果任务还没有完成则调用tryComplete方法
             completed += 1
             iter.remove()
           }

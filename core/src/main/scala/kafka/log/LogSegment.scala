@@ -109,7 +109,9 @@ class LogSegment(val log: FileMessageSet,
    */
   @threadsafe
   private[log] def translateOffset(offset: Long, startingFilePosition: Int = 0): OffsetPosition = {
+    //先根据index稀疏索引来确定开始的物理位置
     val mapping = index.lookup(offset)
+    //获取具体的开始读取数据的物理位置
     log.searchFor(offset, max(mapping.position, startingFilePosition))
   }
 
@@ -131,6 +133,10 @@ class LogSegment(val log: FileMessageSet,
       throw new IllegalArgumentException("Invalid max size for log read (%d)".format(maxSize))
 
     val logSize = log.sizeInBytes // this may change, need to save a consistent copy
+
+    //获取index稀疏矩阵里的offset的开始的物理位置
+    //1:先根据index稀疏索引来确定开始的物理位置
+    //2:获取具体的开始读取数据的物理位置
     val startPosition = translateOffset(startOffset)
 
     // if the start position is already off the end of the log, return null
@@ -155,6 +161,7 @@ class LogSegment(val log: FileMessageSet,
         // offset between new leader's high watermark and the log end offset, we want to return an empty response.
         if(offset < startOffset)
           return FetchDataInfo(offsetMetadata, MessageSet.Empty)
+        //
         val mapping = translateOffset(offset, startPosition.position)
         val endPosition =
           if(mapping == null)
@@ -163,7 +170,7 @@ class LogSegment(val log: FileMessageSet,
             mapping.position
         min(min(maxPosition, endPosition) - startPosition.position, maxSize).toInt
     }
-
+    //获取读取的信息 log.read具体读取的方式
     FetchDataInfo(offsetMetadata, log.read(startPosition.position, length))
   }
 

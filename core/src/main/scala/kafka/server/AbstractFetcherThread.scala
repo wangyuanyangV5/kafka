@@ -96,8 +96,10 @@ abstract class AbstractFetcherThread(name: String,
       fetchRequest
     }
 
-    if (!fetchRequest.isEmpty)
+    if (!fetchRequest.isEmpty) {
+      //根据请求获取分区消息信息
       processFetchRequest(fetchRequest)
+    }
   }
 
   private def processFetchRequest(fetchRequest: REQ) {
@@ -106,6 +108,7 @@ abstract class AbstractFetcherThread(name: String,
 
     try {
       trace("Issuing to broker %d of fetch request %s".format(sourceBroker.id, fetchRequest))
+      //去拉取消息并获取请求的响应
       responseData = fetch(fetchRequest)//
     } catch {
       case t: Throwable =>
@@ -120,6 +123,7 @@ abstract class AbstractFetcherThread(name: String,
     }
     fetcherStats.requestRate.mark()
 
+    //处理拉回的消息信息
     if (responseData.nonEmpty) {
       // process fetched data
       inLock(partitionMapLock) {
@@ -130,6 +134,7 @@ abstract class AbstractFetcherThread(name: String,
             // we append to the log if the current offset is defined and it is the same as the offset requested during fetch
             if (fetchRequest.offset(topicAndPartition) == currentPartitionFetchState.offset) {
               Errors.forCode(partitionData.errorCode) match {
+                //处理正常的拉取消息的请求
                 case Errors.NONE =>
                   try {
                     val messages = partitionData.toByteBufferMessageSet
@@ -141,7 +146,9 @@ abstract class AbstractFetcherThread(name: String,
                     partitionMap.put(topicAndPartition, new PartitionFetchState(newOffset))
                     fetcherLagStats.getAndMaybePut(topic, partitionId).lag = Math.max(0L, partitionData.highWatermark - newOffset)
                     fetcherStats.byteRate.mark(validBytes)
+
                     // Once we hand off the partition data to the subclass, we can't mess with it any more in this thread
+                    //真正处理拉取消息的方法
                     processPartitionData(topicAndPartition, currentPartitionFetchState.offset, partitionData)
                   } catch {
                     case ime: CorruptRecordException =>
@@ -183,6 +190,7 @@ abstract class AbstractFetcherThread(name: String,
     }
   }
 
+  //向任务添加需要拉取的分区信息
   def addPartitions(partitionAndOffsets: Map[TopicAndPartition, Long]) {
     partitionMapLock.lockInterruptibly()
     try {

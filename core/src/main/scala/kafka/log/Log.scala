@@ -514,6 +514,7 @@ class Log(val dir: File,
     if(startOffset == next)
       return FetchDataInfo(currentNextOffsetMetadata, MessageSet.Empty)
 
+    //segments基于key为跳表实现，所以根据startOffset可以获取对应的segment
     var entry = segments.floorEntry(startOffset)
 
     // attempt to read beyond the log end offset is an error
@@ -541,6 +542,7 @@ class Log(val dir: File,
           entry.getValue.size
         }
       }
+      //获取partition消息信息
       val fetchInfo = entry.getValue.read(startOffset, maxOffset, maxLength, maxPosition)
       if(fetchInfo == null) {
         entry = segments.higherEntry(entry.getKey)

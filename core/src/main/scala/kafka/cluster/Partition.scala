@@ -237,9 +237,11 @@ class Partition(val topic: String,
   def updateReplicaLogReadResult(replicaId: Int, logReadResult: LogReadResult) {
     getReplica(replicaId) match {
       case Some(replica) =>
+        //更新本地中存储的slave partition中的leo
         replica.updateLogReadResult(logReadResult)
         // check if we need to expand ISR to include this replica
         // if it is not in the ISR yet
+        //更新ISR列表 把追上master partition的slave追加到ISR列表中,并触发一次更新高水位操作
         maybeExpandIsr(replicaId)
 
         debug("Recorded replica %d log end offset (LEO) position %d for partition %s."
@@ -373,21 +375,28 @@ class Partition(val topic: String,
     replicaManager.tryCompleteDelayedProduce(requestKey)
   }
 
+  //检查10秒内没有更新slave partition并进行剔除
   def maybeShrinkIsr(replicaMaxLagTimeMs: Long) {
     val leaderHWIncremented = inWriteLock(leaderIsrUpdateLock) {
       leaderReplicaIfLocal() match {
         case Some(leaderReplica) =>
+
+          //获取需要摘除的slave partition信息
           val outOfSyncReplicas = getOutOfSyncReplicas(leaderReplica, replicaMaxLagTimeMs)
+
           if(outOfSyncReplicas.size > 0) {
             val newInSyncReplicas = inSyncReplicas -- outOfSyncReplicas
             assert(newInSyncReplicas.size > 0)
             info("Shrinking ISR for partition [%s,%d] from %s to %s".format(topic, partitionId,
               inSyncReplicas.map(_.brokerId).mkString(","), newInSyncReplicas.map(_.brokerId).mkString(",")))
             // update ISR in zk and in cache
+            //更新zk和本地缓存中的ISR列表
             updateIsr(newInSyncReplicas)
-            // we may need to increment high watermark since ISR could be down to 1
 
+            // we may need to increment high watermark since ISR could be down to 1
             replicaManager.isrShrinkRate.mark()
+
+            //更新partition的高水位信息
             maybeIncrementLeaderHW(leaderReplica)
           } else {
             false
@@ -407,8 +416,12 @@ class Partition(val topic: String,
      * there are two cases that will be handled here -
      * 1. Stuck followers: If the leo of the replica hasn't been updated for maxLagMs ms,
      *                     the follower is stuck and should be removed from the ISR
+     * 如果超过10秒还没有收到slave partition的拉取消息的请求就摘除
+     *
      * 2. Slow followers: If the replica has not read up to the leo within the last maxLagMs ms,
      *                    then the follower is lagging and should be removed from the ISR
+     * 如果slave partition 在10秒里没有达到leo则就摘除该slave
+     *
      * Both these cases are handled by checking the lastCaughtUpTimeMs which represents
      * the last time when the replica was fully caught up. If either of the above conditions
      * is violated, that replica is considered to be out of sync
@@ -447,6 +460,7 @@ class Partition(val topic: String,
           val info = log.append(messages, assignOffsets = true)
 
           // probably unblock some follower fetch requests since log end offset has been updated
+          //如果存在slave partition 拉取消息请求正在等待则去唤醒该等待请求
           replicaManager.tryCompleteDelayedFetch(new TopicPartitionOperationKey(this.topic, this.partitionId))
           // we may need to increment high watermark since ISR could be down to 1
           (info, maybeIncrementLeaderHW(leaderReplica))
@@ -466,9 +480,11 @@ class Partition(val topic: String,
 
   private def updateIsr(newIsr: Set[Replica]) {
     val newLeaderAndIsr = new LeaderAndIsr(localBrokerId, leaderEpoch, newIsr.map(r => r.brokerId).toList, zkVersion)
+
+    //更新zk中的ISR信息
     val (updateSucceeded,newVersion) = ReplicationUtils.updateLeaderAndIsr(zkUtils, topic, partitionId,
       newLeaderAndIsr, controllerEpoch, zkVersion)
-
+    //再更新本地缓存中的ISR列表
     if(updateSucceeded) {
       replicaManager.recordIsrChange(new TopicAndPartition(topic, partitionId))
       inSyncReplicas = newIsr
