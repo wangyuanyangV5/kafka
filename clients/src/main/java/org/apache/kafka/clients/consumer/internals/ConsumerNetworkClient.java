@@ -108,6 +108,7 @@ public class ConsumerNetworkClient implements Closeable {
         RequestFutureCompletionHandler future = new RequestFutureCompletionHandler();
         RequestHeader header = client.nextRequestHeader(api);
         RequestSend send = new RequestSend(node.idString(), header, request.toStruct());
+        //把请求放入到请求list中
         put(node, new ClientRequest(now, true, send, future));
         return future;
     }

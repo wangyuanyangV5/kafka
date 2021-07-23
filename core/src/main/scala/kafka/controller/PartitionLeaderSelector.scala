@@ -84,9 +84,11 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
             }
           case false =>
             val liveReplicasInIsr = liveAssignedReplicas.filter(r => liveBrokersInIsr.contains(r))
+            //取liveReplicasInIsr中首个broker id为leader节点
             val newLeader = liveReplicasInIsr.head
             debug("Some broker in ISR is alive for %s. Select %d from ISR %s to be the leader."
                   .format(topicAndPartition, newLeader, liveBrokersInIsr.mkString(",")))
+            //新创建的partition leader 中epoch的值增加1
             new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, liveBrokersInIsr.toList, currentLeaderIsrZkPathVersion + 1)
         }
         info("Selected new leader and ISR %s for offline partition %s".format(newLeaderAndIsr.toString(), topicAndPartition))
@@ -136,6 +138,7 @@ class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext) ex
  * New isr = current isr;
  * Replicas to receive LeaderAndIsr request = assigned replicas
  */
+//扩容Kafka集群时副本重平衡策略
 class PreferredReplicaPartitionLeaderSelector(controllerContext: ControllerContext) extends PartitionLeaderSelector
 with Logging {
   this.logIdent = "[PreferredReplicaPartitionLeaderSelector]: "

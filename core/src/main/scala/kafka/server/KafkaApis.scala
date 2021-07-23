@@ -141,6 +141,8 @@ class KafkaApis(val requestChannel: RequestChannel,
       val responseHeader = new ResponseHeader(correlationId)
       val leaderAndIsrResponse =
         if (authorize(request.session, ClusterAction, Resource.ClusterResource)) {
+
+
           val result = replicaManager.becomeLeaderOrFollower(correlationId, leaderAndIsrRequest, metadataCache, onLeadershipChange)
           new LeaderAndIsrResponse(result.errorCode, result.responseMap.mapValues(new JShort(_)).asJava)
         } else {
@@ -809,6 +811,7 @@ class KafkaApis(val requestChannel: RequestChannel,
     requestChannel.sendResponse(new Response(request, new ResponseSend(request.connectionId, responseHeader, offsetFetchResponse)))
   }
 
+  //处理获取消费组coordinate的请求
   def handleGroupCoordinatorRequest(request: RequestChannel.Request) {
     val groupCoordinatorRequest = request.body.asInstanceOf[GroupCoordinatorRequest]
     val responseHeader = new ResponseHeader(request.header.correlationId)
@@ -820,9 +823,11 @@ class KafkaApis(val requestChannel: RequestChannel,
       val partition = coordinator.partitionFor(groupCoordinatorRequest.groupId)
 
       // get metadata (and create the topic if necessary)
+      //获取topic下的partition信息
       val offsetsTopicMetadata = getOrCreateGroupMetadataTopic(request.securityProtocol)
 
       val responseBody = if (offsetsTopicMetadata.error != Errors.NONE) {
+        //返回没有找到coordinate信息的broker
         new GroupCoordinatorResponse(Errors.GROUP_COORDINATOR_NOT_AVAILABLE.code, Node.noNode)
       } else {
         val coordinatorEndpoint = offsetsTopicMetadata.partitionMetadata().asScala
@@ -879,6 +884,8 @@ class KafkaApis(val requestChannel: RequestChannel,
     requestChannel.sendResponse(new RequestChannel.Response(request, new ResponseSend(request.connectionId, responseHeader, responseBody)))
   }
 
+
+  //处理加入consumer group 的请求
   def handleJoinGroupRequest(request: RequestChannel.Request) {
     import JavaConversions._
 
@@ -886,6 +893,7 @@ class KafkaApis(val requestChannel: RequestChannel,
     val responseHeader = new ResponseHeader(request.header.correlationId)
 
     // the callback for sending a join-group response
+    //定义一个返回响应的回调方法
     def sendResponseCallback(joinResult: JoinGroupResult) {
       val members = joinResult.members map { case (memberId, metadataArray) => (memberId, ByteBuffer.wrap(metadataArray)) }
       val responseBody = new JoinGroupResponse(joinResult.errorCode, joinResult.generationId, joinResult.subProtocol,
@@ -909,6 +917,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       // let the coordinator to handle join-group
       val protocols = joinGroupRequest.groupProtocols().map(protocol =>
         (protocol.name, Utils.toArray(protocol.metadata))).toList
+      //处理加入消费组的请求
       coordinator.handleJoinGroup(
         joinGroupRequest.groupId,
         joinGroupRequest.memberId,

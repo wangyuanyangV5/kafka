@@ -174,12 +174,15 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
         brokerState.newState(Starting)
 
         /* start scheduler */
+        //开启调度线程池
         kafkaScheduler.startup()
 
         /* setup zookeeper */
+        //初始化zk进程
         zkUtils = initZk()
 
         /* start log manager */
+        //管理消息记录的信息
         logManager = createLogManager(zkUtils.zkClient, brokerState)
         logManager.startup()
 
@@ -196,6 +199,7 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
         replicaManager.startup()
 
         /* start kafka controller */
+        //kafkaController的初始化
         kafkaController = new KafkaController(config, zkUtils, brokerState, kafkaMetricsTime, metrics, threadNamePrefix)
         kafkaController.startup()
 
@@ -239,8 +243,12 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
           else
             (protocol, endpoint)
         }
+
+
+
         kafkaHealthcheck = new KafkaHealthcheck(config.brokerId, listeners, zkUtils, config.rack,
           config.interBrokerProtocolVersion)
+        //向zk的/brokers/ids下根据自己的broker id 注册自己
         kafkaHealthcheck.startup()
 
         // Now that the broker id is successfully registered via KafkaHealthcheck, checkpoint it

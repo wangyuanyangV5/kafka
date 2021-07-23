@@ -96,6 +96,7 @@ class GroupCoordinator(val brokerId: Int,
     info("Shutdown complete.")
   }
 
+  //处理加入消费组的请求
   def handleJoinGroup(groupId: String,
                       memberId: String,
                       clientId: String,
@@ -644,6 +645,7 @@ class GroupCoordinator(val brokerId: Int,
     // TODO: add metrics for restabilize timeouts
   }
 
+  //完成加入
   def onCompleteJoin(group: GroupMetadata) {
     group synchronized {
       val failedMembers = group.notYetRejoinedMembers
@@ -661,6 +663,7 @@ class GroupCoordinator(val brokerId: Int,
         }
       }
       if (!group.is(Dead)) {
+        //把group设置为AwaitingSync
         group.initNextGeneration()
         info("Stabilized group %s generation %s".format(group.groupId, group.generationId))
 
@@ -674,7 +677,7 @@ class GroupCoordinator(val brokerId: Int,
             subProtocol=group.protocol,
             leaderId=group.leaderId,
             errorCode=Errors.NONE.code)
-
+          //把加入的
           member.awaitingJoinCallback(joinResult)
           member.awaitingJoinCallback = null
           completeAndScheduleNextHeartbeatExpiration(group, member)

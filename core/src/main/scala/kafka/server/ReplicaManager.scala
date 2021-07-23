@@ -643,14 +643,18 @@ class ReplicaManager(val config: KafkaConfig,
         }
         BecomeLeaderOrFollowerResult(responseMap, Errors.STALE_CONTROLLER_EPOCH.code)
       } else {
+
         val controllerId = leaderAndISRRequest.controllerId
         controllerEpoch = leaderAndISRRequest.controllerEpoch
 
         // First check partition's leader epoch
         val partitionState = new mutable.HashMap[Partition, PartitionState]()
         leaderAndISRRequest.partitionStates.asScala.foreach { case (topicPartition, stateInfo) =>
+          //获取到当前转换的副本数据
           val partition = getOrCreatePartition(topicPartition.topic, topicPartition.partition)
+
           val partitionLeaderEpoch = partition.getLeaderEpoch()
+
           // If the leader epoch is valid record the epoch of the controller that made the leadership decision.
           // This is useful while updating the isr to maintain the decision maker controller's epoch in the zookeeper path
           if (partitionLeaderEpoch < stateInfo.leaderEpoch) {
@@ -676,12 +680,16 @@ class ReplicaManager(val config: KafkaConfig,
         val partitionsTobeLeader = partitionState.filter { case (partition, stateInfo) =>
           stateInfo.leader == config.brokerId
         }
+
         val partitionsToBeFollower = (partitionState -- partitionsTobeLeader.keys)
 
+        //如果是要成为leader就执行下面操作
         val partitionsBecomeLeader = if (!partitionsTobeLeader.isEmpty)
           makeLeaders(controllerId, controllerEpoch, partitionsTobeLeader, correlationId, responseMap)
         else
           Set.empty[Partition]
+
+        //如果是让broker成为foller执行下面的方法
         val partitionsBecomeFollower = if (!partitionsToBeFollower.isEmpty)
           makeFollowers(controllerId, controllerEpoch, partitionsToBeFollower, correlationId, responseMap, metadataCache)
         else
@@ -703,10 +711,16 @@ class ReplicaManager(val config: KafkaConfig,
 
   /*
    * Make the current broker to become leader for a given set of partitions by:
+   *如果让本地的partition成为leader需要执行下面的步骤
    *
    * 1. Stop fetchers for these partitions
+   * 停止这些partition的副本信息拉取线程
+   *
    * 2. Update the partition metadata in cache
+   * 更新缓存中的partition的元数据信息
+   *
    * 3. Add these partitions to the leader partitions set
+   *把这些partition放入本地的leader partition中
    *
    * If an unexpected error is thrown in this function, it will be propagated to KafkaApis where
    * the error message will be set on each partition since we do not know which partition caused it. Otherwise,
@@ -719,6 +733,7 @@ class ReplicaManager(val config: KafkaConfig,
                           partitionState: Map[Partition, PartitionState],
                           correlationId: Int,
                           responseMap: mutable.Map[TopicPartition, Short]): Set[Partition] = {
+
     partitionState.foreach(state =>
       stateChangeLogger.trace(("Broker %d handling LeaderAndIsr request correlationId %d from controller %d epoch %d " +
         "starting the become-leader transition for partition %s")
@@ -731,9 +746,12 @@ class ReplicaManager(val config: KafkaConfig,
 
     try {
       // First stop fetchers for all the partitions
+      //停止所有重新分配partition的拉取消息任务
       replicaFetcherManager.removeFetcherForPartitions(partitionState.keySet.map(new TopicAndPartition(_)))
+
       // Update the partition information to be the leader
       partitionState.foreach{ case (partition, partitionStateInfo) =>
+        //执行partition成为leader后的操作
         if (partition.makeLeader(controllerId, partitionStateInfo, correlationId))
           partitionsToMakeLeaders += partition
         else
@@ -741,11 +759,16 @@ class ReplicaManager(val config: KafkaConfig,
             "controller %d epoch %d for partition %s since it is already the leader for the partition.")
             .format(localBrokerId, correlationId, controllerId, epoch, TopicAndPartition(partition.topic, partition.partitionId)));
       }
+
+
+
       partitionsToMakeLeaders.foreach { partition =>
         stateChangeLogger.trace(("Broker %d stopped fetchers as part of become-leader request from controller " +
           "%d epoch %d with correlation id %d for partition %s")
           .format(localBrokerId, controllerId, epoch, correlationId, TopicAndPartition(partition.topic, partition.partitionId)))
       }
+
+
     } catch {
       case e: Throwable =>
         partitionState.foreach { state =>

@@ -68,10 +68,12 @@ class ControllerChannelManager(controllerContext: ControllerContext, config: Kaf
     }
   }
 
+  //与broker建立网络连接
   def addBroker(broker: Broker) {
     // be careful here. Maybe the startup() API has already started the request send thread
     brokerLock synchronized {
       if(!brokerStateInfo.contains(broker.id)) {
+        //初步与broker建立连接
         addNewBroker(broker)
         startRequestSendThread(broker.id)
       }

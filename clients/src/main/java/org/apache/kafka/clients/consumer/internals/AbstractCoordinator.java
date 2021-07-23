@@ -172,6 +172,7 @@ public abstract class AbstractCoordinator implements Closeable {
 
     /**
      * Block until the coordinator for this group is known and is ready to receive requests.
+     * 阻塞直到该组的协调器已知并准备好接收请求。
      */
     public void ensureCoordinatorReady() {
         while (coordinatorUnknown()) {
@@ -463,6 +464,7 @@ public abstract class AbstractCoordinator implements Closeable {
      * one of the brokers. The returned future should be polled to get the result of the request.
      * @return A request future which indicates the completion of the metadata request
      */
+    //获取分配的COORDINATOR
     private RequestFuture<Void> sendGroupCoordinatorRequest() {
         // initiate the group metadata request
         // find a node to ask about the coordinator

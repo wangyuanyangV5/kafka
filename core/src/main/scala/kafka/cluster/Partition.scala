@@ -171,10 +171,15 @@ class Partition(val topic: String,
       // record the epoch of the controller that made the leadership decision. This is useful while updating the isr
       // to maintain the decision maker controller's epoch in the zookeeper path
       controllerEpoch = partitionStateInfo.controllerEpoch
+
       // add replicas that are new
+      //获取负责些消息的partition，如果本地文件没有就创建，存在则直接返回
       allReplicas.foreach(replica => getOrCreateReplica(replica))
+
+
       val newInSyncReplicas = partitionStateInfo.isr.asScala.map(r => getOrCreateReplica(r)).toSet
       // remove assigned replicas that have been removed by the controller
+      //去除本地已经被controller删除的replica信息
       (assignedReplicas().map(_.brokerId) -- allReplicas).foreach(removeReplica(_))
       inSyncReplicas = newInSyncReplicas
       leaderEpoch = partitionStateInfo.leaderEpoch
@@ -188,10 +193,15 @@ class Partition(val topic: String,
         }
       val leaderReplica = getReplica().get
       // we may need to increment high watermark since ISR could be down to 1
+      //更新高水位信息
       if (isNewLeader) {
         // construct the high watermark metadata for the new leader replica
+        //从新的leader 副本信息中构造高水位信息
         leaderReplica.convertHWToLocalOffsetMetadata()
+
+
         // reset log end offset for remote replicas
+        //重置远端其他副本的leo值
         assignedReplicas.filter(_.brokerId != localBrokerId).foreach(_.updateLogReadResult(LogReadResult.UnknownLogReadResult))
       }
       (maybeIncrementLeaderHW(leaderReplica), isNewLeader)

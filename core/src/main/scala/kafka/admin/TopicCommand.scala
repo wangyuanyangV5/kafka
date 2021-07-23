@@ -36,7 +36,7 @@ import org.apache.kafka.common.internals.TopicConstants
 
 
 object TopicCommand extends Logging {
-
+  //bin/kafka-topics.sh --create --zookeeper localhost:2181 --partitions 6 --replication-factor 2 --topic test01
   def main(args: Array[String]): Unit = {
 
     val opts = new TopicCommandOptions(args)
@@ -59,9 +59,10 @@ object TopicCommand extends Logging {
     try {
       if(opts.options.has(opts.createOpt))
         createTopic(zkUtils, opts)
-      else if(opts.options.has(opts.alterOpt))
+      else if(opts.options.has(opts.alterOpt)) {
+        //改变topic信息
         alterTopic(zkUtils, opts)
-      else if(opts.options.has(opts.listOpt))
+      } else if(opts.options.has(opts.listOpt))
         listTopics(zkUtils, opts)
       else if(opts.options.has(opts.describeOpt))
         describeTopic(zkUtils, opts)
@@ -382,7 +383,7 @@ object TopicCommand extends Logging {
       "*****************************************************************************************************\n" +
       "*** WARNING: you are creating a topic where the max.message.bytes is greater than the broker's    ***\n" +
       "*** default max.message.bytes. This operation is potentially dangerous. Consumers will get        ***\n" +
-      s"*** failures if their fetch.message.max.bytes (old consumer) or ${NewConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG}         ***\n"+ 
+      s"*** failures if their fetch.message.max.bytes (old consumer) or ${NewConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG}         ***\n"+
       "*** (new consumer) < the value you are using.                                                     ***\n" +
       "*****************************************************************************************************\n" +
       s"- value set here: $maxMessageBytes\n" +

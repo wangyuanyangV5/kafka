@@ -320,6 +320,7 @@ class PartitionStateMachine(controller: KafkaController) extends Logging {
    * @param partition           The offline partition
    * @param leaderSelector      Specific leader selector (e.g., offline/reassigned/etc.)
    */
+    //选举partition leader方法
   def electLeaderForPartition(topic: String, partition: Int, leaderSelector: PartitionLeaderSelector) {
     val topicAndPartition = TopicAndPartition(topic, partition)
     // handle leader election for the partitions whose leader is no longer alive
@@ -330,9 +331,16 @@ class PartitionStateMachine(controller: KafkaController) extends Logging {
       var newLeaderAndIsr: LeaderAndIsr = null
       var replicasForThisPartition: Seq[Int] = Seq.empty[Int]
       while(!zookeeperPathUpdateSucceeded) {
+        //获取当前leader partition的ISR列表和epoch的值
+        //zk中保存这些信息的格式为
+        ///brokers/topics/{topic}/partitions/{partitionId}/state/
+        // {"leader":"","leader_epoch":"","isr":"controller_epoch","":""}
         val currentLeaderIsrAndEpoch = getLeaderIsrAndEpochOrThrowException(topic, partition)
+
         val currentLeaderAndIsr = currentLeaderIsrAndEpoch.leaderAndIsr
+
         val controllerEpoch = currentLeaderIsrAndEpoch.controllerEpoch
+
         if (controllerEpoch > controller.epoch) {
           val failMsg = ("aborted leader election for partition [%s,%d] since the LeaderAndIsr path was " +
                          "already written by another controller. This probably means that the current controller %d went through " +
@@ -343,6 +351,7 @@ class PartitionStateMachine(controller: KafkaController) extends Logging {
         }
         // elect new leader or throw exception
         val (leaderAndIsr, replicas) = leaderSelector.selectLeader(topicAndPartition, currentLeaderAndIsr)
+        //更新 zk 中 topic 下的 partition 的 replication 中 的信息
         val (updateSucceeded, newVersion) = ReplicationUtils.updateLeaderAndIsr(zkUtils, topic, partition,
           leaderAndIsr, controller.epoch, currentLeaderAndIsr.zkVersion)
         newLeaderAndIsr = leaderAndIsr
